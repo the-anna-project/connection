@@ -15,7 +15,8 @@ type Connection interface {
 	Weight() float64
 }
 
-// TODO comment management of connections into one direction
+// Service represents a service being able to manage connections within the
+// connection space.
 type Service interface {
 	Boot()
 	Create(namespaceA, namespaceB, peerAID, peerBID string) (Connection, error)

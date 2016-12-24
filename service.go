@@ -177,21 +177,15 @@ func (s *service) Create(namespaceA, namespaceB, peerAID, peerBID string) (Conne
 }
 
 func (s *service) Delete(namespaceA, namespaceB, peerAID, peerBID string) error {
-	// Check if the connection exists, to make sure we actually have to do
-	// something.
-	ok, err := s.Exists(namespaceA, namespaceB, peerAID, peerBID)
-	if err != nil {
-		return maskAny(err)
-	}
-	if !ok {
-		return nil
-	}
-
+	// Delete the connection with all its references and execute the list of
+	// actions asynchronously. This cleans up the underlying storage. Note that
+	// Storage.Remove and Storage.RemoveFromSet are idempotent. In case there is
+	// nothing to remove, these methods do not throw an error.
 	actions := []func(canceler <-chan struct{}) error{
 		func(canceler <-chan struct{}) error {
-			listID := fmt.Sprintf("%s:%s:%s", namespaceA, namespaceB, peerAID)
+			connectionID := fmt.Sprintf("%s:%s:%s:%s", namespaceA, namespaceB, peerAID, peerBID)
 
-			err := s.storage.Connection.RemoveFromSet(listID, peerBID)
+			err := s.storage.Connection.Remove(connectionID)
 			if err != nil {
 				return maskAny(err)
 			}
@@ -199,9 +193,9 @@ func (s *service) Delete(namespaceA, namespaceB, peerAID, peerBID string) error 
 			return nil
 		},
 		func(canceler <-chan struct{}) error {
-			connectionID := fmt.Sprintf("%s:%s:%s:%s", namespaceA, namespaceB, peerAID, peerBID)
+			listID := fmt.Sprintf("%s:%s:%s", namespaceA, namespaceB, peerAID)
 
-			err := s.storage.Connection.Remove(connectionID)
+			err := s.storage.Connection.RemoveFromSet(listID, peerBID)
 			if err != nil {
 				return maskAny(err)
 			}
@@ -215,7 +209,7 @@ func (s *service) Delete(namespaceA, namespaceB, peerAID, peerBID string) error 
 	executeConfig.Actions = actions
 	executeConfig.Canceler = s.closer
 	executeConfig.NumWorkers = len(actions)
-	err = s.worker.Execute(executeConfig)
+	err := s.worker.Execute(executeConfig)
 	if err != nil {
 		return maskAny(err)
 	}

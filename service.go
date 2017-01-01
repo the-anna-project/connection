@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync"
 
-	storagecollection "github.com/the-anna-project/storage/collection"
+	"github.com/the-anna-project/storage"
 	storageerror "github.com/the-anna-project/storage/error"
 	"github.com/the-anna-project/worker"
 )
@@ -16,7 +16,7 @@ import (
 // service.
 type ServiceConfig struct {
 	// Dependencies.
-	StorageCollection *storagecollection.Collection
+	StorageCollection *storage.Collection
 	WorkerService     worker.Service
 
 	// Settings.
@@ -28,10 +28,10 @@ type ServiceConfig struct {
 func DefaultServiceConfig() ServiceConfig {
 	var err error
 
-	var storageCollection *storagecollection.Collection
+	var storageCollection *storage.Collection
 	{
-		storageConfig := storagecollection.DefaultConfig()
-		storageCollection, err = storagecollection.New(storageConfig)
+		storageConfig := storage.DefaultCollectionConfig()
+		storageCollection, err = storage.NewCollection(storageConfig)
 		if err != nil {
 			panic(err)
 		}
@@ -92,7 +92,7 @@ func NewService(config ServiceConfig) (Service, error) {
 
 type service struct {
 	// Dependencies.
-	storage *storagecollection.Collection
+	storage *storage.Collection
 	worker  worker.Service
 
 	// Internals.
